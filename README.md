@@ -47,13 +47,13 @@ The Docker image runs Nginx on port 80, reverse-proxying to the Node.js app on a
 ### Build
 
 ```bash
-docker build -t harborclient-echo .
+docker build -t echo .
 ```
 
 ### Run
 
 ```bash
-docker run --rm -p 8080:80 harborclient-echo
+docker run --rm -d -p 80:80 echo
 ```
 
 Then send requests to the mapped host port:
@@ -71,7 +71,7 @@ curl -X POST "http://localhost:8080/post?test=foo" \
 Set `NGINX_SERVER_NAME` to control the Nginx `server_name` directive. Defaults to `_` (catch-all):
 
 ```bash
-docker run --rm -p 8080:80 -e NGINX_SERVER_NAME=echo.example.com harborclient-echo
+docker run --rm -d -p 80:80 -e NGINX_SERVER_NAME=echo.example.com echo
 ```
 
 ### Environment variables
