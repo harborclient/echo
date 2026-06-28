@@ -20,6 +20,26 @@ curl -X POST "http://localhost:3000/post?test=foo" \
   -d '{"foo":"bar"}'
 ```
 
+### Redirect via `x-redirect-to`
+
+When the `x-redirect-to` header is present on any path except `/health`, the server responds with an HTTP redirect instead of the JSON echo. Supported formats:
+
+| Header value              | Response            |
+| ------------------------- | ------------------- |
+| `https://example.com`     | 302 redirect to URL |
+| `302 https://example.com` | 302 redirect to URL |
+| `301 https://example.com` | 301 redirect to URL |
+
+Malformed values return `400` with `{ "error": "Invalid x-redirect-to header" }`. `/health` ignores this header.
+
+```bash
+# 302 redirect (default when status omitted)
+curl -i -H "x-redirect-to: https://google.com" http://localhost:3000/anything
+
+# Explicit 301
+curl -i -H "x-redirect-to: 301 https://google.com" http://localhost:3000/anything
+```
+
 ## Docker
 
 The Docker image runs Nginx on port 80, reverse-proxying to the Node.js app on an internal port 3000.
