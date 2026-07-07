@@ -71,7 +71,7 @@ curl -X POST "http://localhost:8080/post?test=foo" \
 Set `NGINX_SERVER_NAME` to control the Nginx `server_name` directive. Defaults to `_` (catch-all):
 
 ```bash
-docker run --rm -d -p 80:80 -e NGINX_SERVER_NAME=echo.example.com echo
+docker run --rm -d -p 80:80 -e NGINX_SERVER_NAME=echo.harborclient.com echo
 ```
 
 ### Environment variables
