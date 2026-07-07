@@ -2,6 +2,7 @@ import { Request } from 'express';
 
 export interface EchoResponse {
   args: Record<string, string>;
+  cookies: Record<string, string>;
   data: string;
   files: Record<string, string>;
   form: Record<string, string>;

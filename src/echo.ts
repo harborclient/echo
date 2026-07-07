@@ -1,3 +1,4 @@
+import { parseCookies } from './cookies';
 import { RequestWithRawBody, EchoResponse } from './types';
 
 /**
@@ -109,6 +110,7 @@ export const buildEchoResponse = (req: RequestWithRawBody): EchoResponse => {
 
   return {
     args: normalizeQuery(req.query),
+    cookies: parseCookies(req.headers.cookie),
     data: req.rawBody?.toString('utf8') ?? '',
     files: extractFiles(req),
     form: extractForm(req),

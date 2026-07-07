@@ -1,4 +1,5 @@
 import express, { Express } from 'express';
+import { applyEchoCookies } from './cookies';
 import { buildEchoResponse } from './echo';
 import { bodyParsers } from './middleware/bodyParsers';
 import { INVALID_REDIRECT_HEADER_ERROR, parseRedirectHeader } from './redirect';
@@ -25,7 +26,9 @@ export const createApp = (): Express => {
       }
       return res.redirect(target.status, target.url);
     }
-    res.json(buildEchoResponse(req));
+    const echo = buildEchoResponse(req);
+    applyEchoCookies(res, echo.cookies);
+    res.json(echo);
   });
 
   return app;
