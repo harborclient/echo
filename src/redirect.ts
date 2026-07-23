@@ -13,7 +13,7 @@ const isValidUrl = (url: string): boolean => {
 };
 
 /**
- * Parses an x-redirect-to header value into a redirect status and URL.
+ * Parses an x-echo-redirect header value into a redirect status and URL.
  * Returns null when the value is malformed or the URL is invalid.
  */
 export const parseRedirectHeader = (value: string): RedirectTarget | null => {
@@ -39,5 +39,5 @@ export const parseRedirectHeader = (value: string): RedirectTarget | null => {
 };
 
 export const INVALID_REDIRECT_HEADER_ERROR = {
-  error: 'Invalid x-redirect-to header',
+  error: 'Invalid x-echo-redirect header',
 } as const;

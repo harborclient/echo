@@ -3,6 +3,7 @@ import http from 'node:http';
 import { after, before, describe, it } from 'node:test';
 import { AddressInfo } from 'node:net';
 import { createApp } from './app';
+import { INVALID_REDIRECT_HEADER_ERROR } from './redirect';
 import {
   INVALID_DELAY_HEADER_ERROR,
   INVALID_STRICT_HEADER_ERROR,
@@ -84,10 +85,10 @@ const buildMultipartBody = (boundary: string): { body: Buffer; contentType: stri
   const parts = [
     `--${boundary}\r\n` + 'Content-Disposition: form-data; name="note"\r\n' + '\r\n' + 'hello\r\n',
     `--${boundary}\r\n` +
-      'Content-Disposition: form-data; name="avatar"; filename="avatar.txt"\r\n' +
-      'Content-Type: text/plain\r\n' +
-      '\r\n' +
-      'file-bytes\r\n',
+    'Content-Disposition: form-data; name="avatar"; filename="avatar.txt"\r\n' +
+    'Content-Type: text/plain\r\n' +
+    '\r\n' +
+    'file-bytes\r\n',
     `--${boundary}--\r\n`,
   ];
 
@@ -200,6 +201,89 @@ describe('echo app quiz scenarios', () => {
 
     assert.equal(result.status, 200);
     assert.ok(elapsed >= 180, `expected at least ~200ms delay, got ${elapsed}ms`);
+  });
+
+  it('returns 415 when x-echo-strict=json is set via query param', async () => {
+    const result = await request(port, 'POST', '/post?x-echo-strict=json', {
+      headers: {
+        'content-type': 'text/plain',
+      },
+      body: '{"foo":"bar"}',
+    });
+
+    assert.equal(result.status, 415);
+    assert.deepEqual(result.json, UNSUPPORTED_MEDIA_TYPE_ERROR);
+  });
+
+  it('echoes JSON when x-echo-strict=json is set via query param', async () => {
+    const result = await request(port, 'POST', '/post?x-echo-strict=json', {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: '{"foo":"bar"}',
+    });
+
+    assert.equal(result.status, 200);
+    assert.ok(result.json && typeof result.json === 'object');
+    const echo = result.json as { json: unknown };
+    assert.deepEqual(echo.json, { foo: 'bar' });
+  });
+
+  it('rejects invalid x-echo-delay-ms query values with 400', async () => {
+    const invalid = await request(port, 'GET', '/get?x-echo-delay-ms=1.5');
+    assert.equal(invalid.status, 400);
+    assert.deepEqual(invalid.json, INVALID_DELAY_HEADER_ERROR);
+
+    const excessive = await request(port, 'GET', '/get?x-echo-delay-ms=10001');
+    assert.equal(excessive.status, 400);
+    assert.deepEqual(excessive.json, INVALID_DELAY_HEADER_ERROR);
+  });
+
+  it('delays the response when x-echo-delay-ms is set via query param', async () => {
+    const started = Date.now();
+    const result = await request(port, 'GET', '/get?x-echo-delay-ms=200');
+    const elapsed = Date.now() - started;
+
+    assert.equal(result.status, 200);
+    assert.ok(elapsed >= 180, `expected at least ~200ms delay, got ${elapsed}ms`);
+  });
+
+  it('prefers control headers over conflicting query params', async () => {
+    const started = Date.now();
+    const result = await request(port, 'GET', '/get?x-echo-delay-ms=5000', {
+      headers: { 'x-echo-delay-ms': '0' },
+    });
+    const elapsed = Date.now() - started;
+
+    assert.equal(result.status, 200);
+    assert.ok(elapsed < 1000, `expected header delay 0 to win, got ${elapsed}ms`);
+  });
+
+  it('redirects when x-echo-redirect is set via header', async () => {
+    const result = await request(port, 'GET', '/anything', {
+      headers: { 'x-echo-redirect': 'https://example.com' },
+    });
+
+    assert.equal(result.status, 302);
+    assert.equal(result.headers.location, 'https://example.com');
+  });
+
+  it('redirects with an explicit status when x-echo-redirect is set via query', async () => {
+    const result = await request(
+      port,
+      'GET',
+      '/anything?x-echo-redirect=301%20https://example.com/path',
+    );
+
+    assert.equal(result.status, 301);
+    assert.equal(result.headers.location, 'https://example.com/path');
+  });
+
+  it('rejects malformed x-echo-redirect query values with 400', async () => {
+    const result = await request(port, 'GET', '/anything?x-echo-redirect=not-a-url');
+
+    assert.equal(result.status, 400);
+    assert.deepEqual(result.json, INVALID_REDIRECT_HEADER_ERROR);
   });
 
   it('echoes multipart form fields and uploaded filenames', async () => {

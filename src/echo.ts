@@ -1,22 +1,51 @@
 import { parseCookies } from './cookies';
 import { RequestWithRawBody, EchoResponse } from './types';
 
+type QueryValue = RequestWithRawBody['query'][string];
+
+/**
+ * Reads a single query param as a string.
+ * Duplicate keys use the last string value; nested objects are stringified.
+ * Returns `undefined` when the key is absent or has no usable string value.
+ */
+export const getQueryParam = (
+  query: RequestWithRawBody['query'],
+  key: string,
+): string | undefined => {
+  const value: QueryValue | undefined = query[key];
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    const last = value[value.length - 1];
+    if (typeof last === 'string') {
+      return last;
+    }
+    return undefined;
+  }
+
+  if (value !== null && typeof value === 'object') {
+    return String(value);
+  }
+
+  return undefined;
+};
+
 /**
  * Flattens Express query params to a string map (duplicate keys use last value).
  */
 export const normalizeQuery = (query: RequestWithRawBody['query']): Record<string, string> => {
   const args: Record<string, string> = {};
 
-  for (const [key, value] of Object.entries(query)) {
-    if (typeof value === 'string') {
+  for (const key of Object.keys(query)) {
+    const value = getQueryParam(query, key);
+    if (value !== undefined) {
       args[key] = value;
-    } else if (Array.isArray(value)) {
-      const last = value[value.length - 1];
-      if (typeof last === 'string') {
-        args[key] = last;
-      }
-    } else if (value !== null && typeof value === 'object') {
-      args[key] = String(value);
     }
   }
 
