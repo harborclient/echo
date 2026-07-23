@@ -3,9 +3,7 @@ import { Response } from 'express';
 /**
  * Parses a Cookie request header into a name/value map (duplicate names use last value).
  */
-export const parseCookies = (
-  header: string | string[] | undefined,
-): Record<string, string> => {
+export const parseCookies = (header: string | string[] | undefined): Record<string, string> => {
   const cookies: Record<string, string> = {};
 
   if (header === undefined) {
