@@ -261,26 +261,35 @@ describe('echo app quiz scenarios', () => {
 
   it('redirects when x-echo-redirect is set via header', async () => {
     const result = await request(port, 'GET', '/anything', {
-      headers: { 'x-echo-redirect': 'https://example.com' },
+      headers: { 'x-echo-redirect': 'https://echo.harborclient.com' },
     });
 
     assert.equal(result.status, 302);
-    assert.equal(result.headers.location, 'https://example.com');
+    assert.equal(result.headers.location, 'https://echo.harborclient.com');
   });
 
   it('redirects with an explicit status when x-echo-redirect is set via query', async () => {
     const result = await request(
       port,
       'GET',
-      '/anything?x-echo-redirect=301%20https://example.com/path',
+      '/anything?x-echo-redirect=301%20https://echo.harborclient.com/path',
     );
 
     assert.equal(result.status, 301);
-    assert.equal(result.headers.location, 'https://example.com/path');
+    assert.equal(result.headers.location, 'https://echo.harborclient.com/path');
   });
 
   it('rejects malformed x-echo-redirect query values with 400', async () => {
     const result = await request(port, 'GET', '/anything?x-echo-redirect=not-a-url');
+
+    assert.equal(result.status, 400);
+    assert.deepEqual(result.json, INVALID_REDIRECT_HEADER_ERROR);
+  });
+
+  it('rejects external x-echo-redirect destinations with 400', async () => {
+    const result = await request(port, 'GET', '/anything', {
+      headers: { 'x-echo-redirect': 'https://example.com' },
+    });
 
     assert.equal(result.status, 400);
     assert.deepEqual(result.json, INVALID_REDIRECT_HEADER_ERROR);

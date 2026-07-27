@@ -24,24 +24,30 @@ curl -X POST "http://localhost:3000/post?test=foo" \
 
 When the `x-echo-redirect` header or query param is present on any path except `/health`, the server responds with an HTTP redirect instead of the JSON echo. The header takes precedence when both are set. Supported formats:
 
-| Value                     | Response            |
-| ------------------------- | ------------------- |
-| `https://example.com`     | 302 redirect to URL |
-| `302 https://example.com` | 302 redirect to URL |
-| `301 https://example.com` | 301 redirect to URL |
+| Value                                    | Response            |
+| ---------------------------------------- | ------------------- |
+| `https://echo.harborclient.com`          | 302 redirect to URL |
+| `302 https://echo.harborclient.com`      | 302 redirect to URL |
+| `301 https://echo.harborclient.com/path` | 301 redirect to URL |
 
-Malformed values return `400` with `{ "error": "Invalid x-echo-redirect header" }`. `/health` ignores this control.
+Redirect destinations are allowlisted. Only these hosts are accepted:
+
+- `https://echo.harborclient.com` (HTTPS only; any path or query)
+- `http://localhost` / `https://localhost` (any port or path)
+- `http://127.0.0.1` / `https://127.0.0.1` (any port or path)
+
+Malformed values and destinations outside the allowlist return `400` with `{ "error": "Invalid x-echo-redirect header" }`. `/health` ignores this control.
 
 ```bash
 # 302 redirect (default when status omitted)
-curl -i -H "x-echo-redirect: https://google.com" http://localhost:3000/anything
+curl -i -H "x-echo-redirect: https://echo.harborclient.com" http://localhost:3000/anything
 
 # Explicit 301
-curl -i -H "x-echo-redirect: 301 https://google.com" http://localhost:3000/anything
+curl -i -H "x-echo-redirect: 301 https://echo.harborclient.com/path" http://localhost:3000/anything
 
 # Same via query param (URL-encode spaces in status+URL form)
-curl -i "http://localhost:3000/anything?x-echo-redirect=https://google.com"
-curl -i "http://localhost:3000/anything?x-echo-redirect=301%20https://google.com"
+curl -i "http://localhost:3000/anything?x-echo-redirect=https://echo.harborclient.com"
+curl -i "http://localhost:3000/anything?x-echo-redirect=301%20https://echo.harborclient.com/path"
 ```
 
 ### Strict JSON via `x-echo-strict`
