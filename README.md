@@ -1,6 +1,6 @@
 # harborclient-echo
 
-An httpbin-style HTTP echo server. Every request (except `/health`) is echoed back as JSON containing the full request snapshot: query args, raw body, parsed JSON, form fields, uploaded files, headers, client IP, and full URL.
+An httpbin-style HTTP echo server. Every request (except `/health` and `/sse`) is echoed back as JSON containing the full request snapshot: query args, raw body, parsed JSON, form fields, uploaded files, headers, client IP, and full URL. `/sse` streams that same snapshot as Server-Sent Events.
 
 Supports GET, POST, PUT, DELETE, and other HTTP methods on any path.
 
@@ -77,7 +77,7 @@ curl -i -X POST "http://localhost:3000/post?x-echo-strict=json" \
 
 ### Delay via `x-echo-delay-ms`
 
-Send `x-echo-delay-ms: <integer>` (header or query param) to pause before responding. The header takes precedence when both are set. Values must be whole milliseconds in `0`–`10000`. Malformed, negative, fractional, or excessive values return `400`. The delay applies before redirects and normal echoes. `/health` ignores this control.
+Send `x-echo-delay-ms: <integer>` (header or query param) to pause before responding. The header takes precedence when both are set. Values must be whole milliseconds in `0`–`10000`. Malformed, negative, fractional, or excessive values return `400`. The delay applies before redirects, normal echoes, and SSE streams. `/health` ignores this control.
 
 In HarborClient: add a request header named `x-echo-delay-ms` with value `5000`, then inspect the Timing tab — most of the wait should land in Waiting (TTFB).
 
@@ -86,6 +86,49 @@ curl -i -H "x-echo-delay-ms: 5000" http://localhost:3000/slow
 
 # Same via query param
 curl -i "http://localhost:3000/slow?x-echo-delay-ms=4000"
+```
+
+### Server-Sent Events via `/sse`
+
+`/sse` streams the usual echo snapshot as `text/event-stream` instead of a single JSON body. Any HTTP method is accepted (browsers' `EventSource` uses GET; HarborClient can POST a body and inspect it inside the event payload). Each event looks like:
+
+```
+id: 1
+event: echo
+data: {"args":{},"cookies":{},"data":"",...}
+```
+
+Optional controls (header or query param; header wins when both are set):
+
+| Control                  | Default | Behavior                                                             |
+| ------------------------ | ------- | -------------------------------------------------------------------- |
+| `x-echo-delay-ms`        | `0`     | Pause before opening the stream (same rules as above)                |
+| `x-echo-sse-count`       | `1`     | Number of `echo` events to emit (`1`–`100`)                          |
+| `x-echo-sse-interval-ms` | `0`     | Delay between events (`0`–`10000`)                                   |
+| `x-echo-sse-keepalive`   | off     | When `1` or `true`, emit `: keepalive` comments between/after events |
+
+Malformed control values return `400` JSON before the stream opens. `x-echo-redirect` is ignored on `/sse`. `/health` is unchanged.
+
+In HarborClient: send GET `http://localhost:3000/sse` with `x-echo-sse-count: 3` and `x-echo-sse-interval-ms: 500`, then inspect the streaming response / Timing tab for chunk arrivals.
+
+```bash
+# Single event (EventSource-friendly)
+curl -N http://localhost:3000/sse
+
+# Three events, 200ms apart, with keepalives
+curl -N \
+  -H "x-echo-sse-count: 3" \
+  -H "x-echo-sse-interval-ms: 200" \
+  -H "x-echo-sse-keepalive: true" \
+  http://localhost:3000/sse
+
+# POST body echoed inside the SSE payload
+curl -N -X POST http://localhost:3000/sse \
+  -H "Content-Type: application/json" \
+  -d '{"foo":"bar"}'
+
+# Same controls via query params
+curl -N "http://localhost:3000/sse?x-echo-sse-count=2&x-echo-sse-keepalive=1"
 ```
 
 ### Multipart uploads
